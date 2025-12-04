@@ -1,0 +1,54 @@
+services:
+  db:
+    image: mysql:8
+    container_name: comparateur_db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: comparateur
+      MYSQL_USER: user
+      MYSQL_PASSWORD: pass
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3306:3306"
+
+  scraper:
+    build: ./scraper
+    container_name: comparateur_scraper
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_NAME: comparateur
+      DB_USER: user
+      DB_PASSWORD: pass
+    command: ["bash", "-c", "sleep 10 && scrapy crawl site1 && scrapy crawl site2"]
+
+  web:
+    build: ./web
+    container_name: comparateur_web
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_NAME: comparateur
+      DB_USER: user
+      DB_PASSWORD: pass
+    ports:
+      - "8000:8000"
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: comparateur_phpmyadmin
+    depends_on:
+      - db
+    environment:
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: root
+    ports:
+      - "8080:80"
+
+volumes:
+  db_data:
