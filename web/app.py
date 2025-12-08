@@ -1,56 +1,25 @@
-from flask import Flask, render_template_string
+from flask import Flask, render_template
 import mysql.connector
 import os
 
 app = Flask(__name__)
 
-def get_db_connection():
-    return mysql.connector.connect(
-        host=os.getenv("DB_HOST", "db"),
-        user=os.getenv("DB_USER", "user"),
-        password=os.getenv("DB_PASSWORD", "pass"),
-        database=os.getenv("DB_NAME", "comparateur"),
-    )
 
-TEMPLATE = """
-<!doctype html>
-<html lang="fr">
-<head>
-  <meta charset="utf-8">
-  <title>Comparateur de prix</title>
-  <style>
-    table { border-collapse: collapse; width: 80%; margin: auto; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    th { background: #eee; }
-    .best { font-weight: bold; color: green; }
-    body { font-family: Arial, sans-serif; margin-top: 30px; }
-  </style>
-</head>
-<body>
-<h1 style="text-align:center;">Comparateur de prix</h1>
-{% for product in products %}
-  <h2 style="text-align:center;">{{ product.name }}</h2>
-  <table>
-    <tr>
-      <th>Site</th>
-      <th>Nom</th>
-      <th>Prix</th>
-      <th>Lien</th>
-    </tr>
-    {% for o in product.offers %}
-    <tr>
-      <td>{{ o.site_name }}</td>
-      <td>{{ o.product_name_raw }}</td>
-      <td class="{{ 'best' if o.is_best else '' }}">{{ o.price }} €</td>
-      <td><a href="{{ o.product_url }}" target="_blank">Voir</a></td>
-    </tr>
-    {% endfor %}
-  </table>
-  <br>
-{% endfor %}
-</body>
-</html>
-"""
+def get_db_connection():
+    """
+    Connexion à la base MySQL.
+
+    - En LOCAL : ça utilise 127.0.0.1
+    - En DOCKER : tu pourras définir MYSQL_HOST=db dans docker-compose
+    """
+    conn = mysql.connector.connect(
+        host=os.getenv("MYSQL_HOST", "127.0.0.1"),  # 🔥 127.0.0.1 par défaut
+        user=os.getenv("MYSQL_USER", "root"),
+        password=os.getenv("MYSQL_PASSWORD", "root"),
+        database=os.getenv("MYSQL_DATABASE", "comparateur"),
+    )
+    return conn
+
 
 @app.route("/")
 def index():
@@ -59,56 +28,65 @@ def index():
 
     cursor.execute("""
         SELECT 
-            p.id as product_id,
-            p.name as product_name,
-            o.product_name_raw,
-            o.price,
-            o.product_url,
-            s.name as site_name
-        FROM product p
-        JOIN offer o ON o.product_id = p.id
-        JOIN site s ON s.id = o.site_id
-        ORDER BY p.id, o.price ASC
+            phone_name,
+            brand,
+            website,
+            price,
+            currency,
+            product_url,
+            image_url
+        FROM phones
+        ORDER BY phone_name, brand, website, price
     """)
-
     rows = cursor.fetchall()
+
     cursor.close()
     conn.close()
 
-    products = []
-    current_product_id = None
-    current = None
+    # Si aucune donnée, on renvoie une liste vide
+    if not rows:
+        return render_template("index.html", phones=[], sites=[])
 
-    for r in rows:
-        if r["product_id"] != current_product_id:
-            if current:
-                min_price = min(o["price"] for o in current["offers"])
-                for o in current["offers"]:
-                    o["is_best"] = (o["price"] == min_price)
-                products.append(current)
+    # Liste des sites (colonnes)
+    sites = sorted({row["website"] for row in rows})
 
-            current_product_id = r["product_id"]
-            current = {
-                "id": r["product_id"],
-                "name": r["product_name"],
-                "offers": []
+    # Regroupement par téléphone
+    phones_map = {}  # (phone_name, brand) -> dict
+
+    for row in rows:
+        key = (row["phone_name"], row["brand"])
+
+        if key not in phones_map:
+            phones_map[key] = {
+                "phone_name": row["phone_name"],
+                "brand": row["brand"],
+                "offers": {}  # website -> offre
             }
 
-        current["offers"].append({
-            "site_name": r["site_name"],
-            "product_name_raw": r["product_name_raw"],
-            "price": float(r["price"]),
-            "product_url": r["product_url"],
-            "is_best": False
-        })
+        phones_map[key]["offers"][row["website"]] = {
+            "price": row["price"],
+            "currency": row["currency"],
+            "product_url": row.get("product_url"),
+            "image_url": row.get("image_url"),
+        }
 
-    if current:
-        min_price = min(o["price"] for o in current["offers"])
-        for o in current["offers"]:
-            o["is_best"] = (o["price"] == min_price)
-        products.append(current)
+    # Calcul meilleur prix par téléphone
+    phones = []
+    for phone in phones_map.values():
+        offers = phone["offers"]
+        prices = [o["price"] for o in offers.values()]
+        if prices:
+            min_price = min(prices)
+            for offer in offers.values():
+                offer["is_best"] = (offer["price"] == min_price)
+        phones.append(phone)
 
-    return render_template_string(TEMPLATE, products=products)
+    # Tri des téléphones (optionnel)
+    phones.sort(key=lambda p: (p["brand"], p["phone_name"]))
+
+    return render_template("index.html", phones=phones, sites=sites)
+
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000)
+    # En Docker, il faut écouter sur 0.0.0.0 pour être joignable de l'extérieur
+    app.run(host="0.0.0.0", port=5000, debug=True)

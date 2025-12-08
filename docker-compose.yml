@@ -1,54 +1,59 @@
+version: "3.9"
+
 services:
+  # ---------------------------
+  # 1) Base de données MySQL
+  # ---------------------------
   db:
-    image: mysql:8
+    image: mysql:8.0
     container_name: comparateur_db
+    restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: comparateur
-      MYSQL_USER: user
-      MYSQL_PASSWORD: pass
-    volumes:
-      - db_data:/var/lib/mysql
-      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root
     ports:
       - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
 
+  # ---------------------------
+  # 2) Application web Flask
+  # ---------------------------
+  web:
+    build: ./web
+    container_name: comparateur_web
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      MYSQL_HOST: db
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root
+      MYSQL_DATABASE: comparateur
+    ports:
+      - "5000:5000"
+
+  # ---------------------------
+  # 3) Scraper Scrapy
+  # ---------------------------
   scraper:
-    build: ./scraper
+    build: ./comparateur_spider
     container_name: comparateur_scraper
     depends_on:
       - db
     environment:
-      DB_HOST: db
-      DB_NAME: comparateur
-      DB_USER: user
-      DB_PASSWORD: pass
-    command: ["bash", "-c", "sleep 10 && scrapy crawl site1 && scrapy crawl site2"]
+      MYSQL_HOST: db
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root
+      MYSQL_DATABASE: comparateur
+    # pas besoin d'exposer de ports, il ne sert qu'en backend
+    # Dev A pourra modifier la commande par défaut dans le Dockerfile
+    # ou tu peux surcharger ici avec :
+    # command: ["scrapy", "crawl", "site1"]
 
-  web:
-    build: ./web
-    container_name: comparateur_web
-    depends_on:
-      - db
-    environment:
-      DB_HOST: db
-      DB_NAME: comparateur
-      DB_USER: user
-      DB_PASSWORD: pass
-    ports:
-      - "8000:8000"
-
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin
-    container_name: comparateur_phpmyadmin
-    depends_on:
-      - db
-    environment:
-      PMA_HOST: db
-      PMA_USER: root
-      PMA_PASSWORD: root
-    ports:
-      - "8080:80"
-
+# Volume persistant pour MySQL
 volumes:
   db_data:

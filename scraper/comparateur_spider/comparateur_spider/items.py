@@ -1,8 +1,10 @@
 import scrapy
 
-class OfferItem(scrapy.Item):
-    product_name_normalized = scrapy.Field()
-    product_name_raw = scrapy.Field()
-    site_name = scrapy.Field()
+class PhoneItem(scrapy.Item):
+    phone_name = scrapy.Field()
+    brand = scrapy.Field()
+    website = scrapy.Field()
     price = scrapy.Field()
+    currency = scrapy.Field()
     product_url = scrapy.Field()
+    image_url = scrapy.Field()

@@ -1,24 +1,27 @@
-CREATE DATABASE IF NOT EXISTS comparateur;
+CREATE DATABASE IF NOT EXISTS comparateur
+  DEFAULT CHARACTER SET utf8mb4
+  DEFAULT COLLATE utf8mb4_unicode_ci;
+
 USE comparateur;
 
-CREATE TABLE site (
+CREATE TABLE IF NOT EXISTS phones (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100),
-    url VARCHAR(255)
+    phone_name VARCHAR(255) NOT NULL,
+    brand VARCHAR(100),
+    website VARCHAR(100) NOT NULL,
+    price DECIMAL(10,2) NOT NULL,
+    currency VARCHAR(10) DEFAULT 'EUR',
+    product_url TEXT,
+    image_url TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE product (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL
-);
 
-CREATE TABLE offer (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    product_id INT,
-    site_id INT,
-    product_name_raw VARCHAR(255),
-    price DECIMAL(10,2),
-    product_url VARCHAR(500),
-    FOREIGN KEY (product_id) REFERENCES product(id),
-    FOREIGN KEY (site_id) REFERENCES site(id)
-);
+INSERT INTO phones (phone_name, brand, website, price, currency, product_url)
+VALUES ('iPhone 15', 'Apple', 'Site1', 1099.00, 'EUR', 'https://exemple.com/iphone15');
+
+INSERT INTO phones (phone_name, brand, website, price, currency, product_url)
+VALUES ('Galaxy S24', 'Samsung', 'Site2', 879.00, 'EUR', 'https://exemple.com/galaxys24');
+
+INSERT INTO phones (phone_name, brand, website, price, currency, product_url)
+VALUES ('iPhone 15', 'Apple', 'Site2', 1209.00, 'EUR', 'https://exemple.com/iphone15');

@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.11-slim
 
 WORKDIR /app
 
@@ -7,6 +7,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-WORKDIR /app/comparateur_spider
-
-CMD ["scrapy", "list"]
+# Commande par défaut -> Dev A pourra changer
+CMD ["scrapy", "crawl", "site1"]

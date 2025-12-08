@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Comparateur de téléphones</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 2rem;
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 0.6rem;
+            text-align: center;
+            vertical-align: top;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .offer-cell {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            align-items: center;
+        }
+        .offer-cell img {
+            max-width: 80px;
+            max-height: 80px;
+            object-fit: contain;
+        }
+        .best-price {
+            font-weight: bold;
+            color: green;
+        }
+        a {
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Comparateur de téléphones</h1>
+
+{% if phones and sites %}
+    <table>
+        <thead>
+            <tr>
+                <th>Téléphones</th>
+                {% for site in sites %}
+                    <th>{{ site }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for phone in phones %}
+                <tr>
+                    <!-- Colonne téléphone -->
+                    <td>
+                        <strong>{{ phone.phone_name }}</strong><br>
+                        <small>{{ phone.brand }}</small>
+                    </td>
+
+                    <!-- Une cellule par site -->
+                    {% for site in sites %}
+                        {% set offer = phone.offers.get(site) %}
+                        <td>
+                            {% if offer %}
+                                <div class="offer-cell">
+                                    <!-- Image -->
+                                    {% if offer.image_url %}
+                                        <img src="{{ offer.image_url }}" alt="{{ phone.phone_name }}">
+                                    {% endif %}
+
+                                    <!-- Prix -->
+                                    <span class="{{ 'best-price' if offer.is_best }}">
+                                        {{ offer.price }} {{ offer.currency }}
+                                    </span>
+
+                                    <!-- Lien -->
+                                    {% if offer.product_url %}
+                                        <a href="{{ offer.product_url }}" target="_blank">
+                                            Voir l’offre
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>Aucun téléphone pour le moment.</p>
+{% endif %}
+
+</body>
+</html>
