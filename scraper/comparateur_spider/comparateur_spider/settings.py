@@ -39,7 +39,7 @@ COOKIES_ENABLED = False
 # 5) Pipelines : on active la pipeline MySQL
 # -------------------------------------------------
 ITEM_PIPELINES = {
-    "comparateur_spider.pipelines.MySQLStorePipeline": 300,
+   # "comparateur_spider.pipelines.MySQLStorePipeline": 300,
 }
 
 # -------------------------------------------------
